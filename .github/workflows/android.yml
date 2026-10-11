@@ -44,19 +44,16 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      - name: Find and build project
+      - name: Install Gradle and generate Wrapper
         run: |
-          echo "Searching for Gradle wrapper..."
-          find . -type f -name gradlew -print
-          GRADLEW="$(find . -type f -name gradlew -print -quit)"
-          if [ -z "$GRADLEW" ]; then
-            echo "ERROR: gradlew is missing from the repository."
-            echo "Top-level files:"
-            ls -la
-            exit 1
-          fi
-          PROJECT_DIR="$(dirname "$GRADLEW")"
-          cd "$PROJECT_DIR"
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          echo "/tmp/gradle-8.9/bin" >> "$GITHUB_PATH"
+          /tmp/gradle-8.9/bin/gradle --version
+          /tmp/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
+
+      - name: Build APK
+        run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
