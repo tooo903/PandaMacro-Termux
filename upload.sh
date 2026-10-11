@@ -30,9 +30,9 @@ fi
 git branch -M main
 
 if git remote get-url origin >/dev/null 2>&1; then
-  git remote set-url origin https://github.com/tooo903/PandaMacro.git
+  git remote set-url origin https://github.com/tooo903/PandaMacro-Termux.git
 else
-  git remote add origin https://github.com/tooo903/PandaMacro.git
+  git remote add origin https://github.com/tooo903/PandaMacro-Termux.git
 fi
 
 ASKPASS="$(mktemp)"
