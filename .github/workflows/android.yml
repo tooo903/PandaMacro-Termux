@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout
@@ -22,16 +25,38 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
-
-      - name: Accept SDK licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Build APK
+      - name: Locate Android SDK tools
         run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager not found"
+            exit 1
+          fi
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+
+      - name: Install Android SDK packages
+        run: |
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Find and build project
+        run: |
+          echo "Searching for Gradle wrapper..."
+          find . -type f -name gradlew -print
+          GRADLEW="$(find . -type f -name gradlew -print -quit)"
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew is missing from the repository."
+            echo "Top-level files:"
+            ls -la
+            exit 1
+          fi
+          PROJECT_DIR="$(dirname "$GRADLEW")"
+          cd "$PROJECT_DIR"
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
@@ -39,5 +64,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PandaMacro-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: '**/app/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
